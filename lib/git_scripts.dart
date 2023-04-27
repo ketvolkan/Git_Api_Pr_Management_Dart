@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:process_run/process_run.dart';
 
 import 'pull_request_model.dart';
 
@@ -10,7 +11,12 @@ void main() async {
   String baseUrl = "https://api.github.com/repos/YOUR_GITHUB_NAME/YOUR_GITHUB_REPO/pulls";
   var token = "YOUR_GITHUB_TOKEN";
   var headers = {"Accept": "application/vnd.github+json", "Authorization": "Bearer $token", "X-GitHub-Api-Version": "2022-11-28"};
-  (await mergePullRequest(headers, (await createPullRequest(headers, baseUrl)), baseUrl)) ? print("Completed!") : print("Error");
+  if (await mergePullRequest(headers, (await createPullRequest(headers, baseUrl)), baseUrl)) {
+    print("Completed!");
+    gitPullAllBranches();
+  } else {
+    print("Error");
+  }
 }
 
 //*Creating Pr's
@@ -29,6 +35,15 @@ Future<Map<App, PullRequestModel>> createPullRequest(headers, String baseUrl) as
     }
   }
   return pullRequest;
+}
+
+Future<void> gitPullAllBranches() async {
+  var shell = Shell();
+  for (var app in App.values) {
+    await shell.run("git checkout ${app.branch}");
+    await shell.run("git pull");
+  }
+  await shell.run("git checkout main");
 }
 
 //*Merging Pr's
